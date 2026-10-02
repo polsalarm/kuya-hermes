@@ -1,358 +1,156 @@
 <p align="center"><img src="assets/kuya-hermes-fullbody.png" alt="Kuya Hermes mascot" width="220"></p>
 
-# Kuya Hermes · Suki Mart branch-ops copilot
+# Kuya Hermes
 
-> **CAMP / RUN Hermes Agent hackathon · Track 3: Open Innovation**
-> One Hermes agent on two surfaces: **HQ in Hermes Desktop** and **branch managers on Telegram**, sharing the same MCP tools and skill over the Suki Mart sandbox.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Status: Rapid Production](https://img.shields.io/badge/Status-Rapid%20Production-green)](docs/index.md)
+[![Stack: Hermes + Python](https://img.shields.io/badge/Stack-Hermes%20%2B%20Python-black)](https://hermes-agent.nousresearch.com/docs)
+[![Docs: FMD](https://img.shields.io/badge/Docs-FMD-333)](docs/index.md)
 
-### 🔗 Links
+One Hermes agent runs Suki Mart branch ops for HQ in Hermes Desktop and for branch managers on Telegram, over the same MCP tools and skill.
+
+CAMP / RUN Hermes Agent hackathon, 2 October 2026, Avtica Office. Track: Open Innovation.
+
+Built with the [Foundational Matrix Documents (FMD)](https://github.com/polsalarm/kuya-hermes) workflow recorded in [docs/index.md](docs/index.md). The pitch deck is separate: [Kuya Hermes Pitch](https://docs.google.com/presentation/d/1FUpL2Lwria9scJyw579aeD1j7PTHWj7t_eRVc9OhJ8Y/edit?usp=sharing).
+
+### Links
+
 | What | Link |
 |---|---|
-| 🌐 **Website** (landing page) | **https://kuya-hermes.vercel.app** |
-| 📊 **Live dashboard** (snapshot of real Suki Mart data, Sep 30 2026) | https://kuya-hermes.vercel.app/dashboard |
-| 🧢 **Live demo with real Hermes chat** (temporary tunnel, only while the team laptop is on) | https://packets-tract-streets-macintosh.trycloudflare.com (no login) |
-| 💬 **Telegram bot** (branch managers) | https://t.me/kuyahermes_bot |
-| 💻 **Source code** | https://github.com/polsalarm/kuya-hermes |
-| 🧰 **Hackathon starter kit** (upstream) | https://github.com/TadeyRuk/hermes |
-| 📚 **Hermes Agent docs** | https://hermes-agent.nousresearch.com/docs |
+| Pitch deck (12 slides) | https://docs.google.com/presentation/d/1FUpL2Lwria9scJyw579aeD1j7PTHWj7t_eRVc9OhJ8Y/edit?usp=sharing |
+| Website | https://kuya-hermes.vercel.app |
+| Live dashboard snapshot | https://kuya-hermes.vercel.app/dashboard |
+| Live demo with real Hermes chat (temporary tunnel, only while the team laptop is on) | https://packets-tract-streets-macintosh.trycloudflare.com (no login) |
+| Telegram bot | https://t.me/kuyahermes_bot |
+| Source | https://github.com/polsalarm/kuya-hermes |
+| Hackathon starter kit | https://github.com/TadeyRuk/hermes |
+| Hermes Agent docs | https://hermes-agent.nousresearch.com/docs |
 
-> The Vercel site is a **static snapshot**: real numbers, pre-rendered from `store.db`. The live Kuya chat (the real Hermes agent) runs in the local demo (`uv run web/app.py`) and on Telegram. The Telegram bot and the live chat respond only while the team laptop is running the Hermes gateway.
-
-**Problem.** Suki Mart's branches lose sales and goodwill for reasons nobody connects in time. In the sandbox (as of 2026-09-30):
-- **47 items are out of stock**, and Ermita alone has 14 out of stock with no purchase order.
-- **12 products have duplicate open purchase orders.** BGC's Calamansi Juice has 4 at once.
-- Suppliers promise one lead time and deliver another: Visayas Canning promises 5 days and really takes **11.3**.
-- Shift no-shows and sick calls leave blocks below staffing targets, with **46 support tickets never answered** on top.
-
-**Solution.** Kuya Hermes turns that into one loop: **detect → check → propose → confirm → act**.
-
-#### The three layers
-
-| | Layer | Folder | What it does |
-|:-:|---|---|---|
-| 🔧 | **MCP server**: the hands | `mcp-server/` | 9 Suki Mart tools (listed below) |
-| 📘 | **Skill**: the playbook | `skills/kuya-hermes-ops/` | Chains the tools into workflows and asks before every write |
-| 🖥️ | **Desktop plugin**: the face | `desktop-plugin/kuya-hermes-hq/` | Kuya Hermes HQ page with **▶ Run full sweep** |
-| 💬 | **Telegram**: bonus channel | Hermes gateway | Branch managers report from the floor in Taglish |
-| 🌐 | **Website**: bonus | `web/` | Landing page and live dashboard |
-
-#### MCP tools (`suki` server)
-
-| Tool | What it answers | Type |
-|---|---|:-:|
-| `network_sweep` | Which of the 12 branches needs help most? | 👀 read |
-| `branch_pulse` | How is this branch doing on stock, staff, tickets and deliveries? | 👀 read |
-| `check_restock` | Should we reorder? Checks for open or **duplicate POs** and uses the supplier's **real** lead time | 👀 read |
-| `create_purchase_order` | File a restock PO (refuses duplicates) | ✍️ write |
-| `find_staff_shifts` | Find an absent person's upcoming shift | 👀 read |
-| `find_shift_cover` | Who is the most reliable free colleague to cover? | 👀 read |
-| `assign_cover` | Book the cover and mark the absence | ✍️ write |
-| `list_branches` · `describe_sandbox` | Branch codes and the data model (from the starter kit) | 👀 read |
-
-#### Skill workflows (`kuya-hermes-ops`)
-
-| Workflow | Triggered by | Steps |
-|---|---|---|
-| **Full sweep** | ▶ Run full sweep | sweep → pulse of the worst branch → check restock → propose → ✅ confirm → write |
-| **Branch pulse** | *"kumusta ang Alabang?"* | pulse → rank issues → next actions |
-| **Fix stockouts** | *"ubos na ang bottled water sa ALB"* | check restock (skip open POs) → propose PO → ✅ confirm → create PO |
-| **Cover absence** | *"di pumasok si John bukas, 7am"* | find shift → find cover → propose → ✅ confirm → assign |
-
-**Flow:** HQ button / Telegram message / website chat → `kuya-hermes-ops` skill → `suki` MCP tools → `data/store.db` → answer, then a confirmed write → result back on screen.
-
-### Run it (Windows)
-```powershell
-# MCP (absolute path)
-hermes mcp add suki --command uv --args run C:\path\to\kuya-hermes\mcp-server\server.py
-# Skill + plugin. On Windows the Hermes home is %LOCALAPPDATA%\hermes, not %USERPROFILE%\.hermes
-xcopy /E /I skills\kuya-hermes-ops %LOCALAPPDATA%\hermes\skills\kuya-hermes-ops
-xcopy /E /I desktop-plugin\kuya-hermes-hq %LOCALAPPDATA%\hermes\desktop-plugins\kuya-hermes-hq
-copy persona-SOUL.md %LOCALAPPDATA%\hermes\SOUL.md   # optional: Kuya Hermes persona
-hermes gateway restart
-hermes desktop        # Ctrl+K → Reload desktop plugins → sidebar: Kuya Hermes HQ
-```
-Reset the data after a demo with `git checkout -- data/store.db`.
-
-### Website (landing page + live dashboard with real Hermes chat)
-```powershell
-# 1. Turn on Hermes' local API server: add to %LOCALAPPDATA%\hermes\.env, then restart the gateway
-#    API_SERVER_ENABLED=true
-#    API_SERVER_KEY=<any long random string>
-hermes gateway restart
-# 2. Run the site
-uv run web/app.py        # → http://localhost:8787  (dashboard: /dashboard)
-```
-- **`/`**: landing page. Its problem stats are pulled live from `store.db`.
-- **`/dashboard`**: live KPIs, branch risk cards, and a click-through branch pulse, built with the same functions as the MCP server. The **Kuya chat** panel talks to the real Hermes agent (`kuya-hermes-ops` skill and `suki` tools) through Hermes' API server on `127.0.0.1:8642`. The key stays on the server and is never sent to the browser.
-- Read-only by design: purchase orders and shift covers only happen through Kuya, after a yes.
-- **Public tunnel demo** (optional): `$env:SITE_PASSWORD='…'; uv run web/app.py` adds a password, then run `cloudflared tunnel --url http://localhost:8787`. Before exposing it, lock the API-server agent to the suki tools: `hermes config set platform_toolsets.api_server '["mcp-suki"]'`, and disable any other MCP servers. Those load for every platform.
-- **Vercel (static snapshot):** `uv run web/build_static.py`, then `cd web/dist && vercel deploy --prod`. All `/api/*` GETs are pre-rendered to JSON and wired up with rewrites.
-
-### Demo script (for the video, ~5 min)
-1. **Problem (30s):** Suki Mart branches have stockouts, duplicate POs, short shifts and unanswered tickets, and nobody connects them in time.
-2. **HQ in Desktop (2 min):** sidebar → **Kuya Hermes HQ** → **Run full sweep**. Kuya ranks all 12 branches (Ermita and Alabang are worst) and the KPI tiles and risk badges fill in live. Click **ERM → Branch pulse**, then **Fix stockouts**: Kuya skips items with an open PO, drafts the rest, and asks *"I-file ko na ba?"*. Answer yes, and you get PO numbers back.
-3. **Field on Telegram (1.5 min):** *"di pumasok si John Soriano bukas ng 7am sa Alabang"* → Kuya finds his shift, proposes Rowena Tomas (fewest absences), and books the cover after a yes. Only the final answers show in Telegram (tool progress is turned off there).
-4. **Close (30s):** one agent, two surfaces, same MCP and skill, and every write needs a human yes.
-
-### Assets
-- `assets/kuya-hermes-fullbody.png`, `assets/kuya-hermes-avatar.png`: mascot (the 160px avatar is embedded in the plugin)
-- `assets/icons.md`: the UI icon set (inline SVG, `currentColor`)
-- `assets/ui-inspo.png`: the design reference for the HQ page
-
-`sari-sari/` holds our earlier prototype: the same Kuya Hermes persona keeping utang and stock for a single sari-sari store via Telegram and Google Sheets.
-
----
-
-# Camp Run with Hermes Agent
-
-**The official starter kit for the CAMP / RUN Hermes Agent hackathon** — October 2, 2026 · Avtica Office.
-
-Fork this repo, and in 45–60 minutes build one connected solution on top of a realistic business sandbox:
-
-```
-  LAYER 3 · DESKTOP PLUGIN      LAYER 2 · SKILL            LAYER 1 · MCP SERVER        SANDBOX
-  "the face"                    "the playbook"             "the hands"
- ┌──────────────────┐        ┌──────────────────┐       ┌──────────────────┐       ┌──────────────┐
- │ Pane / command in│ ─────▶ │ SKILL.md teaches │ ────▶ │ Python tools that│ ────▶ │ data/store.db│
- │ Hermes Desktop   │        │ Hermes a workflow│       │ read & act on the│       │ Suki Mart    │
- └──────────────────┘        └──────────────────┘       │ data             │       └──────────────┘
-                                                        └──────────────────┘
-```
-
-Everything runs **locally on your laptop** — no cloud, no accounts, no API keys for the data. Works offline.
-
----
-
-## Contents
-
-- [The sandbox: Suki Mart](#the-sandbox-suki-mart)
-- [Before the event](#before-the-event)
-- [Quick start](#quick-start)
-- [Layer 1 — MCP server](#layer-1--mcp-server)
-- [Layer 2 — Skill](#layer-2--skill)
-- [Layer 3 — Desktop plugin](#layer-3--desktop-plugin)
-- [Suggested timebox](#suggested-timebox)
-- [Rules & judging](#rules--judging)
-- [Troubleshooting](#troubleshooting)
-
----
-
-## The sandbox: Suki Mart
-
-**Suki Mart** is a fictional grocery and delivery chain with **12 branches across Metro Manila** — BGC, Makati, Ortigas, Kapitolyo, Cubao, Katipunan, Tomas Morato, Shaw, Alabang, BF Parañaque, Marikina and Ermita.
-
-It lives in one SQLite file, `data/store.db`, with **~230,000 rows across 18 tables** and six months of history:
-
-| Area | Tables |
-|---|---|
-| Stores & supply | `branches`, `suppliers`, `products`, `inventory`, `purchase_orders` |
-| Customers & sales | `customers`, `loyalty_accounts`, `loyalty_transactions`, `promos`, `orders`, `order_items` |
-| Delivery | `riders`, `deliveries` |
-| People & operations | `staff`, `staffing_targets`, `shifts` |
-| Customer experience | `support_tickets`, `reviews` |
-
-📖 Full column reference: **[data/SCHEMA.md](data/SCHEMA.md)**
-
-Three things to know:
-
-1. **"Today" inside the data is `2026-09-30`.** Use it for "this week", "last 30 days", "overdue", etc.
-2. **The data is messy on purpose.** Every department has real problems planted in it — the kind a real operations or customer team would lose sleep over. Finding one worth solving is part of the challenge.
-3. **You can't break it for good.** `python data/seed.py` rebuilds the exact same database in seconds.
-
-The challenge track is **Business Operations** or **Customer Experience** (Open Innovation may also be considered).
-
----
-
-## Before the event
-
-Do this at home — venue Wi-Fi is not the place to install things.
-
-- [ ] **Hermes Agent + Hermes Desktop** installed → [docs](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart)
-- [ ] A working model provider (`hermes model`) — your own account
-- [ ] `hermes doctor` passes
-- [ ] `uv` available (`uv --version`) — the Hermes installer includes it
-- [ ] `git` installed and this repo forked & cloned
-- [ ] Python 3.10+ (only needed if you run the scripts directly)
-
----
+The Vercel site is a static snapshot of `data/store.db` as of 2026-09-30. Live Kuya chat runs in `uv run web/app.py` and on Telegram, and only while the team laptop is running the Hermes gateway.
 
 ## Quick start
 
-```bash
-# 1. Fork this repo on GitHub, then clone YOUR fork
-git clone https://github.com/<your-username>/Camp-Run-with-Hermes-Agent.git
-cd Camp-Run-with-Hermes-Agent
-
-# 2. Check the MCP server starts (Ctrl+C to stop — it waits silently for Hermes)
-uv run mcp-server/server.py
-
-# 3. Register it with Hermes — use the ABSOLUTE path to server.py
-pwd        # macOS / Linux  →  e.g. /Users/you/Camp-Run-with-Hermes-Agent
-cd         # Windows (cmd)  →  e.g. C:\Users\you\Camp-Run-with-Hermes-Agent
-
-hermes mcp add suki --command uv --args run /ABSOLUTE/PATH/Camp-Run-with-Hermes-Agent/mcp-server/server.py
-
-# 4. Restart Hermes (no hot-reload for MCP), then verify
-hermes mcp test suki
+```powershell
+hermes mcp add suki --command uv --args run C:\path\to\kuya-hermes\mcp-server\server.py
+xcopy /E /I skills\kuya-hermes-ops %LOCALAPPDATA%\hermes\skills\kuya-hermes-ops
+xcopy /E /I desktop-plugin\kuya-hermes-hq %LOCALAPPDATA%\hermes\desktop-plugins\kuya-hermes-hq
+copy persona-SOUL.md %LOCALAPPDATA%\hermes\SOUL.md
+hermes gateway restart
+hermes desktop
 ```
 
-Then ask Hermes: *"Use the suki MCP server to describe the Suki Mart sandbox."*
+On Windows the Hermes home is `%LOCALAPPDATA%\hermes`, not `%USERPROFILE%\.hermes`. In Desktop: Ctrl+K, Reload desktop plugins, then open **Kuya Hermes HQ**.
 
-> **Alternative to step 3** — add it to `~/.hermes/config.yaml` yourself:
-> ```yaml
-> mcp_servers:
->   suki:
->     command: uv
->     args: ["run", "/ABSOLUTE/PATH/Camp-Run-with-Hermes-Agent/mcp-server/server.py"]
-> ```
+Reset the sandbox after a demo:
 
----
-
-## Layer 1 — MCP server
-
-📁 `mcp-server/server.py`
-
-A working Python MCP server (FastMCP) with the database already wired up and two tools: `describe_sandbox` (exploration helper) and `list_branches` (an example domain tool). **Your job: add the tools your idea needs.**
-
-```python
-@mcp.tool()
-def find_stockout_risks(branch_code: str, days_of_cover: int = 3) -> list[dict]:
-    """Products at a branch that will run out within N days at current sales pace."""
-    return query("SELECT ... WHERE ...", (branch_code, days_of_cover))
+```powershell
+git checkout -- data/store.db
 ```
 
-Good tools:
+`python data/seed.py` rebuilds the same file. Requirements: Hermes Agent, Hermes Desktop, a configured `hermes model`, `uv`, Python 3.10+, and this repo.
 
-- **Answer one business question each**, with clear parameters (`branch_code`, `days`, `limit`…).
-- **Keep SQL inside the tool.** A generic "run any SQL" tool scores low — the judges want domain design.
-- **Return small, structured results.** 20 clean rows beat 2,000 raw ones.
-- **Have a docstring written for the AI** — it's how Hermes decides when to call the tool.
-- **Can take action** with the `execute()` helper (resolve a ticket, create a purchase order, flag a customer…).
+Local website:
 
-After every change: **restart Hermes**, then `hermes mcp test suki`. Tools appear to the agent as `mcp_suki_<tool_name>`.
-
-> The server pins `mcp<2` (the classic `FastMCP` API most docs and AI assistants use). `uv run` installs it automatically — no `pip install` needed.
-
----
-
-## Layer 2 — Skill
-
-📁 `skills/suki-team-skill/SKILL.md`
-
-A skill is a markdown procedure Hermes loads on demand. It teaches the agent **when** to act and **how to chain your MCP tools** into a real multi-step workflow — the sequence, the decision rules, and the output format.
-
-```bash
-# 1. Rename the folder AND the `name:` field to your skill's name (they must match)
-# 2. Fill in the template, then install it:
-cp -r skills/<your-skill> ~/.hermes/skills/                      # macOS / Linux
-xcopy /E /I skills\<your-skill> %USERPROFILE%\.hermes\skills\<your-skill>   # Windows
+```powershell
+uv run web/app.py
 ```
 
-Installed skills take effect in **new sessions** — start a new chat after installing. Test it by asking something that matches your skill's description, or name it directly: *"Use the \<your-skill\> skill to…"*
+Open http://localhost:8787. Dashboard: http://localhost:8787/dashboard. For live chat, set `API_SERVER_ENABLED=true` and `API_SERVER_KEY` in the Hermes `.env`, then restart the gateway. The key stays on the server.
 
-📖 [Working with Skills](https://hermes-agent.nousresearch.com/docs/guides/work-with-skills)
+Optional public tunnel: set `SITE_PASSWORD`, run the site, then `cloudflared tunnel --url http://localhost:8787`. Before that, lock the API-server agent to the suki tools with `hermes config set platform_toolsets.api_server '["mcp-suki"]'` and disable any other MCP servers.
 
----
+Static Vercel snapshot: `uv run web/build_static.py`, then deploy `web/dist`.
 
-## Layer 3 — Desktop plugin
+**Pre-flight:** gateway up, `store.db` still at the sandbox date, plugin reloaded, Telegram session ready. Presenter: any of the six teammates.
 
-📁 `desktop-plugin/suki-panel/plugin.js`
+## What it does
 
-A pane inside Hermes Desktop with buttons that trigger your skill, plus a ⌘K / Ctrl+K command. It's a single JavaScript file — no build step.
+Suki Mart's branches lose sales because stock, purchase orders, suppliers, shifts, and tickets are separate. On 2026-09-30 in `data/store.db`:
 
-```bash
-# Rename the folder AND the `id` in plugin.js (they must match), then:
-cp -r desktop-plugin/<your-plugin> ~/.hermes/desktop-plugins/                               # macOS / Linux
-xcopy /E /I desktop-plugin\<your-plugin> %USERPROFILE%\.hermes\desktop-plugins\<your-plugin>   # Windows
-```
+- **47 items are out of stock.** Ermita has 14, and none of those have a purchase order.
+- **12 branch-product pairs have duplicate open purchase orders.** BGC's Calamansi Juice 1L (SKU SM-BEV-0050) has 4.
+- **Visayas Canning Corp. promises 5 days and averages 11.3.**
+- **46 open or pending tickets were never answered,** on top of shifts below target.
 
-In Hermes Desktop: **⌘K / Ctrl+K → "Reload desktop plugins"**, and enable it under **Capabilities → Plugins** if needed. Saves hot-reload after that.
+Kuya Hermes runs one loop: detect, check, propose, confirm, act. The confirm line is "I-file ko na ba?"
 
-Loader rules (from the SDK):
+| Layer | What we built | Judging |
+|---|---|---|
+| MCP, the hands | `mcp-server/server.py`, server name `suki`. Seven domain tools: `network_sweep`, `branch_pulse`, `check_restock`, `create_purchase_order`, `find_staff_shifts`, `find_shift_cover`, `assign_cover`. SQL stays inside the tools. `describe_sandbox` and `list_branches` are starter helpers and are not part of the seven. | MCP, 20. Deck slide 8. |
+| Skill, the playbook | `skills/kuya-hermes-ops`. Workflows: full sweep, branch pulse, fix stockouts, cover an absence. Reads Taglish. Asks before every write. | Skill, 20. Deck slides 7 and 9. |
+| Desktop plugin, the face | `desktop-plugin/kuya-hermes-hq`. Sidebar page, Run full sweep, live risk badges, 12-branch picker, branch pulse, fix stockouts, cover shift gaps, Ask Kuya, side pane, Ctrl+K. | Desktop plugin, 20. Deck slide 5. |
+| Same path on Telegram | Hermes gateway. Floor reports use the same skill and tools. | End-to-end, 10, with the row below. Deck slides 6 and 7. |
 
-- Only three imports work: `@hermes/plugin-sdk`, `react`, `react/jsx-runtime`.
-- The file isn't compiled — write UI with `jsx()` / `jsxs()`, **not** `<JSX/>` syntax.
-- Use theme variables (`var(--ui-text-secondary)`), never hardcoded colors.
+**End-to-end:** HQ button or Telegram message, `kuya-hermes-ops`, `mcp_suki_*`, `data/store.db`, answer in the same chat, then a confirmed write, then the result. Only `create_purchase_order` and `assign_cover` write. The first refuses a duplicate open PO. The second runs only after a yes.
 
-**Going further:** the template sends prompts into the chat with `host.composer.submit()`. The SDK can do much more — sidebar pages, status-bar widgets, transcript directives that render your own components inside the agent's reply, and a Python backend via `ctx.rest`. Hermes ships a bundled **`hermes-desktop-plugins`** skill — ask your agent to help you build the pane.
+**Relevance:** the four sandbox facts above. Open Innovation on a business-operations problem. Deck slides 2 and 3.
 
-📖 [Desktop Plugin SDK](https://hermes-agent.nousresearch.com/docs/developer-guide/desktop-plugin-sdk)
+**Uniqueness:** one agent, two surfaces, real lead time instead of the supplier promise, duplicate-PO refusal, Taglish field reports. Deck slide 6 and slide 9. This is not the upstream starter, and it is not the earlier single-store prototype in `sari-sari/`.
 
----
+## Documentation
 
-## Suggested timebox
+| Doc | Purpose |
+|-----|---------|
+| [Index](docs/index.md) | Manifest. Built on FMD v1.28.1. |
+| [IDEA](docs/idea-kuya-hermes.md) | Spark, user, cut line |
+| [Scrutiny](docs/scrutiny-kuya-hermes.md) | Gate: PROCEED WITH FIXES |
+| [PRD](docs/prd-kuya-hermes.md) | Scope and PRD-F IDs |
+| [SDD](docs/sdd-kuya-hermes.md) | MCP, web, security |
+| [QAD](docs/qad-kuya-hermes.md) | Happy, sad, and abuse paths |
+| [DSD](docs/dsd-kuya-hermes.md) | Navy and gold tokens |
+| [Judging](docs/JUDGING.md) | Official 100-point rubric |
 
-| Minutes | Goal |
+**Living design files:** [BRAND.md](BRAND.md) · [DESIGN.md](DESIGN.md)
+
+## Demo
+
+Deck slide 10. Three beats:
+
+| When | What the room sees |
 |---|---|
-| 0–15 | MCP tools written; `hermes mcp test` passes |
-| 15–30 | Skill written, installed, and triggering from a natural prompt |
-| 30–50 | Desktop pane wired to the skill |
-| 50–60 | Polish and rehearse the 5-minute demo |
+| 0:30 | HQ, Run full sweep. Ermita and Alabang rank worst. Badges fill from the tool. |
+| 1:30 | Ermita, branch pulse, then fix stockouts. Open POs are skipped. A yes returns PO numbers. |
+| 2:30 | Telegram: "di pumasok si John Soriano bukas ng 7am sa Alabang." Kuya finds shift 14723 and proposes Rowena Tomas (EMP-0156, fewest absences). A yes books the cover. |
 
-Using Hermes (or any AI) to help write your code is **allowed and encouraged**. The idea, the design and the integration are what's judged.
+Fallback if live chat dies: https://kuya-hermes.vercel.app/dashboard. Do not demo settings, a seed rebuild, or `sari-sari/`.
 
----
+| Criterion | Points | Where |
+|-----------|-------:|-------|
+| MCP Server | 20 | Slide 8. `mcp-server/server.py` |
+| Skill | 20 | Slides 7 and 9. `skills/kuya-hermes-ops/SKILL.md` |
+| Desktop Plugin GUI | 20 | Slide 5. `desktop-plugin/kuya-hermes-hq` |
+| End-to-End Integration | 10 | Slide 7. Button or message, skill, MCP, `store.db`, same chat |
+| Relevance | 15 | Slides 2 and 3. Sandbox date 2026-09-30 |
+| Uniqueness | 10 | Slides 6 and 9 |
+| Demo and Pitch | 5 | Slide 10, inside a 5-minute slot: problem, then Hermes, then working output |
 
-## Rules & judging
+## Team
 
-📋 Full mechanics and scoring: **[docs/JUDGING.md](docs/JUDGING.md)**
+CAMP / RUN, 2 October 2026.
 
-| Criterion | Points |
-|---|---:|
-| MCP Server (Layer 1) | 20 |
-| Skill (Layer 2) | 20 |
-| Desktop Plugin GUI (Layer 3) | 20 |
-| End-to-End Integration | 10 |
-| Relevance | 15 |
-| Uniqueness | 10 |
-| Demo & Pitch | 5 |
-| **Total** | **100** |
+- [Carlos Jerico Dela Torre](https://www.linkedin.com/in/delatorrecj)
+- [Fathi Mahad](https://www.linkedin.com/in/fathimahad/)
+- [Gerald Berongoy](https://www.linkedin.com/in/geraldberongoy/)
+- [Keanu Agustin](https://www.linkedin.com/in/keanuagustin31/)
+- [Paul Dacalan](https://www.linkedin.com/in/paul-dacalan/)
+- [Xander Dacillo](https://www.linkedin.com/in/lord-xander-dacillo-ba627b329/)
 
-- Build on the Suki Mart sandbox data.
-- Write your own MCP — catalog MCPs or existing plugins don't count as your team's build.
-- Demo live from your laptop: **problem → how Hermes is used → working output**, in 5 minutes.
+## Assets
 
----
+- `assets/kuya-hermes-fullbody.png`, `assets/kuya-hermes-avatar.png`, `assets/kuya-hermes-avatar-160.png`
+- `assets/icons.md`: inline SVG, `currentColor`
+- `assets/ui-inspo.png`: HQ page reference
 
-## Troubleshooting
+`sari-sari/` is an earlier prototype: the same persona, one sari-sari store, Telegram and Google Sheets. It is not this submission.
 
-| Problem | Fix |
-|---|---|
-| `hermes mcp test suki` fails | Use the **absolute** path to `server.py`. Run `uv run mcp-server/server.py` directly to see errors. Restart Hermes after any change. |
-| `No module named 'mcp.server.fastmcp'` | You're on `mcp` v2. Run through `uv run` (it respects the `mcp<2` pin in the file header). |
-| Tools don't show up in chat | Restart Hermes — MCP servers load at startup only. Check `hermes mcp list`. |
-| `unable to open database file` | Don't move `server.py` out of the repo — it finds `data/store.db` relative to its own location. |
-| Skill doesn't trigger | Start a **new** session. Make the `description:` specific about *when* to use it. Folder name must equal `name:`. |
-| Plugin doesn't appear | Folder name must equal the `id` in `plugin.js`. ⌘K → "Reload desktop plugins". Check the error toast. |
-| `ReferenceError` in plugin | Every identifier used in `jsx()` must be in the import line. |
-| Broke the data | `python data/seed.py` — rebuilds the identical database. |
+## Built on
 
----
-
-## Repository layout
-
-```
-Camp-Run-with-Hermes-Agent/
-├── data/
-│   ├── store.db              ← the Suki Mart sandbox (SQLite)
-│   ├── seed.py               ← deterministic generator = reset command
-│   └── SCHEMA.md             ← tables, columns, relationships, enums
-├── mcp-server/
-│   └── server.py             ← Layer 1 template
-├── skills/
-│   └── suki-team-skill/
-│       └── SKILL.md          ← Layer 2 template
-├── desktop-plugin/
-│   └── suki-panel/
-│       └── plugin.js         ← Layer 3 template
-└── docs/
-    └── JUDGING.md            ← mechanics & scoring
-```
-
----
+This repo started from the [Camp Run with Hermes Agent starter kit](https://github.com/TadeyRuk/hermes). Mechanics and the 100-point rubric stay in [docs/JUDGING.md](docs/JUDGING.md). The starter's "how to begin from the template" pages are upstream. The layers above are the team's build.
 
 ## License
 
-[MIT](LICENSE) — fork it, remix it, ship it. Suki Mart and every person, business and record in the dataset are **fictional**; any resemblance to real entities is coincidental.
+MIT. See [LICENSE](LICENSE). Suki Mart and every person in the sandbox are fictional.
 
-Built for **CAMP / RUN** · Avtica × DEVCON Manila · Powered by [Hermes Agent](https://hermes-agent.nousresearch.com) by Nous Research.
+---
+
+*README materialized from FMD README_Template.md · 2026-10-02*
