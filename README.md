@@ -101,6 +101,87 @@ The challenge is to build all three layers and connect them.
 
 Telegram uses the same skill and the same tools from the floor. It is not a fourth required layer.
 
+### MCP tools
+
+| Tool | What it answers | Type |
+|---|---|---|
+| `network_sweep` | Which of the 12 branches needs help most? | read |
+| `branch_pulse` | How is this branch doing on stock, staff, tickets, and deliveries? | read |
+| `check_restock` | Should we reorder? It checks for an open order and uses the supplier's real lead time. | read |
+| `create_purchase_order` | File a restock order. A second order for an item already on order is refused. | write |
+| `find_staff_shifts` | Find an absent person's upcoming shift. | read |
+| `find_shift_cover` | Who is free, and who rarely misses work? | read |
+| `assign_cover` | Book the cover and mark the absence. | write |
+| `list_branches`, `describe_sandbox` | Branch codes and the data model. Starter helpers, and not part of the seven. | read |
+
+### Skill workflows
+
+| Workflow | Triggered by | Steps |
+|---|---|---|
+| Full sweep | Run full sweep | sweep, then pulse of the worst branch, then check restock, then propose, then confirm, then write |
+| Branch pulse | "kumusta ang Alabang?" | pulse, then rank the issues, then next actions |
+| Fix stockouts | "ubos na ang bottled water sa ALB" | check restock and skip open orders, then propose, then confirm, then create the order |
+| Cover an absence | "di pumasok si John bukas, 7am" | find the shift, then find a cover, then propose, then confirm, then assign |
+
+## Architecture
+
+### System flow
+
+Head office, Telegram, and the website all reach the same skill. The website chat goes through `web/app.py` to the Hermes API on `127.0.0.1:8642`. The key stays on the server.
+
+```mermaid
+graph TD
+    HQ[Hermes Desktop HQ]
+    TG[Telegram]
+    WEB[Website chat]
+    APP[web/app.py]
+    API["Hermes API 127.0.0.1:8642"]
+    SKILL[kuya-hermes-ops skill]
+    MCP["suki MCP tools"]
+    DB[(data/store.db)]
+    HQ --> SKILL
+    TG --> SKILL
+    WEB --> APP
+    APP --> API
+    API --> SKILL
+    SKILL --> MCP
+    MCP --> DB
+```
+
+### Confirm before a write
+
+Reads can run on their own. `create_purchase_order` and `assign_cover` wait until someone answers "I-file ko na ba?" with a yes. A second order for an item already on order is refused.
+
+```mermaid
+graph LR
+    READ[Read tools] --> CHAT[Answer in the same chat]
+    ASK["Ask: I-file ko na ba?"] --> YES[A yes]
+    YES --> PO[create_purchase_order]
+    YES --> COVER[assign_cover]
+    PO --> CHECK{Already on order}
+    CHECK -->|yes| REFUSE[Refuse the second order]
+    CHECK -->|no| DB[(data/store.db)]
+    COVER --> DB
+```
+
+### Directory
+
+```
+kuya-hermes/
+├── mcp-server/
+│   └── server.py                 suki MCP tools
+├── skills/
+│   └── kuya-hermes-ops/          the playbook
+├── desktop-plugin/
+│   └── kuya-hermes-hq/           the HQ page
+├── web/                          landing page and dashboard
+├── data/
+│   └── store.db                  Suki Mart sandbox
+├── docs/                         product docs
+├── persona-SOUL.md
+└── README.md
+```
+
 ## Competition requirements
 
 | Criterion | Points | Where we meet it |
@@ -145,6 +226,8 @@ uv run web/app.py
 ```
 
 Open http://localhost:8787. Dashboard: http://localhost:8787/dashboard. For live chat, set `API_SERVER_ENABLED=true` and `API_SERVER_KEY` in the Hermes `.env`, then restart the gateway. The key stays on the server.
+
+`/` reads live numbers from `store.db`. The `/dashboard` chat uses the Hermes API, and the key never goes to the browser. Orders and shift covers happen only after a yes.
 
 Optional public tunnel: set `SITE_PASSWORD`, run the site, then `cloudflared tunnel --url http://localhost:8787`. Before that, lock the API-server agent to the suki tools with `hermes config set platform_toolsets.api_server '["mcp-suki"]'` and disable any other MCP servers.
 
